@@ -201,7 +201,7 @@ contract BankingSystem {
         * @dev FUNCTION used by account owner to add new beneficiary to the account
         * @param _beneficiaryAddress Address of account that is to be added as beneficiary.
     */
-    function addBeneficiary(address _beneficiaryAddress) external accountExists(msg.sender) accountExists(_beneficiaryAddress) onlyAccountOwner isAccountActive(msg.sender) {
+    function addBeneficiary(address _beneficiaryAddress) external accountExists(msg.sender) accountExists(_beneficiaryAddress) onlyAccountOwner isAccountActive(msg.sender) isAccountActive(_beneficiaryAddress) {
         require(!checkBeneficiaryExistsUtil(_beneficiaryAddress), "Beneficiary already exists");
         accounts[msg.sender].beneficiaries.push(_beneficiaryAddress);
         emit BeneficiaryAdded(_beneficiaryAddress);
@@ -212,14 +212,16 @@ contract BankingSystem {
         * @param _beneficiaryAddress Address of account to which funds are to be transfered.
         * @param _amount Ammount of the funds being transfered.
     */
-    function transfer(address _beneficiaryAddress, uint256 _amount) payable external accountExists(msg.sender) accountExists(_beneficiaryAddress) onlyAccountOwner isAccountActive(msg.sender) hasEnoughBalance(msg.sender, _amount) {
-        _amount = _amount * 1 ether;
+    function transfer(address _beneficiaryAddress, uint256 _amount) payable external accountExists(msg.sender) accountExists(_beneficiaryAddress) onlyAccountOwner isAccountActive(msg.sender) isAccountActive(_beneficiaryAddress) hasEnoughBalance(msg.sender, _amount) {
+        require(checkBeneficiaryExistsUtil(_beneficiaryAddress), "Account not added as beneficiary");
+        // _amount = _amount * 1 ether;
         bytes32 _id = createTransactionUtil(msg.sender, _beneficiaryAddress, _amount);  // create a transaction object
         accounts[msg.sender].balance -= _amount;                                        // decrease balance of account that is sending funds
         accounts[_beneficiaryAddress].balance += _amount;                               // increase balance of account that is receiving funds
         accounts[msg.sender].debitTransactions.push(_id);                               // add transaction ID to the debit transaction list of account that is sending funds
         accounts[_beneficiaryAddress].creditTransactions.push(_id);                     // add transaction ID to the credit transaction list of account that is receiving funds
-        emit TransferSuccessfull(msg.sender, _beneficiaryAddress, _id, (_amount / 1 ether), block.timestamp);
+        // emit TransferSuccessfull(msg.sender, _beneficiaryAddress, _id, (_amount / 1 ether), block.timestamp);
+        emit TransferSuccessfull(msg.sender, _beneficiaryAddress, _id, _amount, block.timestamp);
     }
 
     /**
@@ -228,7 +230,7 @@ contract BankingSystem {
     */
     function getBalance() external view accountExists(msg.sender) isAccountActive(msg.sender) returns(uint256 _balance) {
         require(msg.sender == accounts[msg.sender].owner, "Only account owner or bank manager can access this functionality");
-        _balance = accounts[msg.sender].balance;
+        _balance = accounts[msg.sender].balance / 1 ether;
     }
 
     /**
